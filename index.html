@@ -324,126 +324,11 @@
     </div>
 
     <script>
-        // Graph data structure
-        const graph = {
-            nodes: [
-                { id: 'Warehouse', x: 150, y: 100 },
-                { id: 'A', x: 350, y: 80 },
-                { id: 'B', x: 550, y: 100 },
-                { id: 'C', x: 150, y: 250 },
-                { id: 'D', x: 350, y: 220 },
-                { id: 'E', x: 550, y: 250 },
-                { id: 'F', x: 750, y: 200 },
-                { id: 'G', x: 250, y: 400 },
-                { id: 'H', x: 450, y: 380 },
-                { id: 'I', x: 650, y: 400 },
-                { id: 'J', x: 450, y: 520 }
-            ],
-            edges: [
-                { from: 'Warehouse', to: 'A', weight: 5 },
-                { from: 'Warehouse', to: 'C', weight: 8 },
-                { from: 'A', to: 'B', weight: 7 },
-                { from: 'A', to: 'D', weight: 6 },
-                { from: 'B', to: 'E', weight: 4 },
-                { from: 'B', to: 'F', weight: 9 },
-                { from: 'C', to: 'D', weight: 3 },
-                { from: 'C', to: 'G', weight: 10 },
-                { from: 'D', to: 'E', weight: 5 },
-                { from: 'D', to: 'H', weight: 7 },
-                { from: 'E', to: 'F', weight: 6 },
-                { from: 'E', to: 'I', weight: 8 },
-                { from: 'F', to: 'I', weight: 5 },
-                { from: 'G', to: 'H', weight: 4 },
-                { from: 'G', to: 'J', weight: 12 },
-                { from: 'H', to: 'I', weight: 6 },
-                { from: 'H', to: 'J', weight: 5 },
-                { from: 'I', to: 'J', weight: 7 },
-                // Some bidirectional edges
-                { from: 'D', to: 'A', weight: 6 },
-                { from: 'E', to: 'D', weight: 5 },
-                { from: 'I', to: 'E', weight: 8 },
-                { from: 'J', to: 'H', weight: 5 },
-                // Additional connections
-                { from: 'A', to: 'Warehouse', weight: 5 },
-                { from: 'B', to: 'A', weight: 7 },
-                { from: 'C', to: 'Warehouse', weight: 8 }
-            ]
-        };
-
-        // Floyd-Warshall Algorithm Implementation
-        class FloydWarshall {
-            constructor(graph) {
-                this.nodes = graph.nodes;
-                this.edges = graph.edges;
-                this.n = this.nodes.length;
-                this.nodeIndex = {};
-                
-                // Create node index mapping
-                this.nodes.forEach((node, i) => {
-                    this.nodeIndex[node.id] = i;
-                });
-
-                // Initialize distance and next matrices
-                this.dist = Array(this.n).fill(null).map(() => Array(this.n).fill(Infinity));
-                this.next = Array(this.n).fill(null).map(() => Array(this.n).fill(null));
-
-                // Initialize diagonal to 0
-                for (let i = 0; i < this.n; i++) {
-                    this.dist[i][i] = 0;
-                }
-
-                // Add edges to distance matrix
-                this.edges.forEach(edge => {
-                    const u = this.nodeIndex[edge.from];
-                    const v = this.nodeIndex[edge.to];
-                    this.dist[u][v] = edge.weight;
-                    this.next[u][v] = v;
-                });
-
-                // Run Floyd-Warshall algorithm
-                this.compute();
-            }
-
-            compute() {
-                // Floyd-Warshall algorithm
-                for (let k = 0; k < this.n; k++) {
-                    for (let i = 0; i < this.n; i++) {
-                        for (let j = 0; j < this.n; j++) {
-                            if (this.dist[i][k] + this.dist[k][j] < this.dist[i][j]) {
-                                this.dist[i][j] = this.dist[i][k] + this.dist[k][j];
-                                this.next[i][j] = this.next[i][k];
-                            }
-                        }
-                    }
-                }
-            }
-
-            getPath(start, end) {
-                const u = this.nodeIndex[start];
-                const v = this.nodeIndex[end];
-
-                if (this.next[u][v] === null) {
-                    return null; // No path exists
-                }
-
-                const path = [u];
-                let current = u;
-
-                while (current !== v) {
-                    current = this.next[current][v];
-                    path.push(current);
-                }
-
-                // Convert indices back to node IDs
-                return path.map(i => this.nodes[i].id);
-            }
-
-            getDistance(start, end) {
-                const u = this.nodeIndex[start];
-                const v = this.nodeIndex[end];
-                return this.dist[u][v];
-            }
-        }
+        // API Configuration
+        const API_URL = 'http://localhost:5000';
+        
+        // Graph data structure (will be loaded from API)
+        let graph = null;
 
         // Visualization class
         class GraphVisualizer {
@@ -597,10 +482,27 @@
         }
 
         // Initialize application
-        let floydWarshall;
         let visualizer;
 
-        function init() {
+        async function loadGraphFromAPI() {
+            try {
+                const response = await fetch(`${API_URL}/api/graph`);
+                if (!response.ok) {
+                    throw new Error('Failed to load graph from API');
+                }
+                return await response.json();
+            } catch (error) {
+                console.error('Error loading graph:', error);
+                alert('Could not connect to backend server. Please ensure the Python server is running on http://localhost:5000');
+                return null;
+            }
+        }
+
+        async function init() {
+            // Load graph from API
+            graph = await loadGraphFromAPI();
+            if (!graph) return;
+
             const canvas = document.getElementById('graphCanvas');
             visualizer = new GraphVisualizer(canvas, graph);
 
@@ -620,14 +522,13 @@
                 endSelect.appendChild(option2);
             });
 
-            // Compute Floyd-Warshall
-            floydWarshall = new FloydWarshall(graph);
-
             // Set up event listeners
             document.getElementById('findRouteBtn').addEventListener('click', findRoute);
+            
+            console.log('✅ Frontend connected to Python backend successfully!');
         }
 
-        function findRoute() {
+        async function findRoute() {
             const start = document.getElementById('startLocation').value;
             const end = document.getElementById('endLocation').value;
             const resultsSection = document.getElementById('resultsSection');
@@ -659,37 +560,54 @@
             // Show loading
             loading.classList.add('active');
 
-            // Simulate computation delay for better UX
-            setTimeout(() => {
-                const path = floydWarshall.getPath(start, end);
-                const distance = floydWarshall.getDistance(start, end);
+            try {
+                // Call Flask API to calculate shortest path
+                const response = await fetch(`${API_URL}/api/shortest-path`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ start, end })
+                });
 
+                const data = await response.json();
                 loading.classList.remove('active');
 
-                if (!path || distance === Infinity) {
+                if (!data.success || !data.path) {
                     resultsContent.innerHTML = `
                         <div class="result-content error">
-                            <div class="result-value">No path exists between ${start} and ${end}.</div>
+                            <div class="result-value">${data.message || `No path exists between ${start} and ${end}.`}</div>
                         </div>
                     `;
                     visualizer.setHighlightedPath([]);
                 } else {
-                    const pathString = path.join(' → ');
+                    const pathString = data.path.join(' → ');
                     resultsContent.innerHTML = `
                         <div class="result-content">
                             <div class="result-label">Optimal Path:</div>
                             <div class="path-display">${pathString}</div>
                             <div class="result-label" style="margin-top: 15px;">Total Travel Time:</div>
-                            <div class="result-value" style="font-size: 1.5rem; color: #4CAF50; font-weight: bold;">${distance} minutes</div>
+                            <div class="result-value" style="font-size: 1.5rem; color: #4CAF50; font-weight: bold;">${data.distance} minutes</div>
                             <div class="result-label" style="margin-top: 10px;">Stops:</div>
-                            <div class="result-value">${path.length - 1} intermediate stop(s)</div>
+                            <div class="result-value">${data.stops} intermediate stop(s)</div>
+                            <div class="result-label" style="margin-top: 10px; font-size: 0.85rem; color: #888;">Computed by Python Flask Backend</div>
                         </div>
                     `;
-                    visualizer.setHighlightedPath(path);
+                    visualizer.setHighlightedPath(data.path);
                 }
 
                 resultsSection.style.display = 'block';
-            }, 300);
+            } catch (error) {
+                loading.classList.remove('active');
+                console.error('Error calculating path:', error);
+                resultsContent.innerHTML = `
+                    <div class="result-content error">
+                        <div class="result-value">Error connecting to backend server. Please ensure Python server is running.</div>
+                    </div>
+                `;
+                resultsSection.style.display = 'block';
+                visualizer.setHighlightedPath([]);
+            }
         }
 
         // Initialize on load
