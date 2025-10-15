@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Optimal Route Planner</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        header p {
+            margin-top: 10px;
+            font-size: 1.1rem;
+            opacity: 0.95;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 0;
+            min-height: 700px;
+        }
+
+        .control-panel {
+            background: #f8f9fa;
+            padding: 30px;
+            border-right: 1px solid #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .section {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .section h2 {
+            font-size: 1.2rem;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section h2::before {
+            content: '●';
+            color: #667eea;
+            font-size: 1.5rem;
+        }
+
+        .instructions {
+            color: #666;
+            font-size: 0.95rem;
+            line-height: 1.6;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #444;
+            font-size: 0.95rem;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        select:hover {
+            border-color: #667eea;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        button:active {
+            transform: translateY(0);
+        }
+
+        .results {
+            margin-top: 20px;
+        }
+
+        .result-content {
+            background: #f0f4ff;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .result-content.error {
+            background: #fff0f0;
+            border-left-color: #e74c3c;
+        }
+
+        .result-label {
+            font-weight: 600;
+            color: #555;
+            margin-bottom: 5px;
+            font-size: 0.9rem;
+        }
+
+        .result-value {
+            font-size: 1.1rem;
+            color: #333;
+            margin-bottom: 12px;
+        }
+
+        .path-display {
+            font-family: 'Courier New', monospace;
+            background: white;
+            padding: 12px;
+            border-radius: 6px;
+            word-break: break-word;
+            line-height: 1.8;
+        }
+
+        .visualization-area {
+            background: #fafbfc;
+            padding: 30px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        #graphCanvas {
+            width: 100%;
+            height: 100%;
+            cursor: grab;
+        }
+
+        #graphCanvas:active {
+            cursor: grabbing;
+        }
+
+        .legend {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            font-size: 0.9rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+
+        .legend-item:last-child {
+            margin-bottom: 0;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid #333;
+        }
+
+        .legend-line {
+            width: 30px;
+            height: 3px;
+            border-radius: 2px;
+        }
+
+        @media (max-width: 1024px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+
+            .control-panel {
+                border-right: none;
+                border-bottom: 1px solid #e0e0e0;
+            }
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .loading.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗺️ Optimal Route Planner</h1>
+            <p>Floyd-Warshall Algorithm Visualization</p>
+        </header>
+
+        <div class="main-content">
+            <div class="control-panel">
+                <div class="section">
+                    <h2>Instructions</h2>
+                    <div class="instructions">
+                        Select a start and end location from the dropdowns below. Click "Find Optimal Route" to calculate and visualize the shortest path using the Floyd-Warshall algorithm.
+                    </div>
+                </div>
+
+                <div class="section">
+                    <h2>Route Selection</h2>
+                    <div class="form-group">
+                        <label for="startLocation">Start Location</label>
+                        <select id="startLocation">
+                            <option value="">-- Select Start --</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="endLocation">End Location</label>
+                        <select id="endLocation">
+                            <option value="">-- Select End --</option>
+                        </select>
+                    </div>
+                    <button id="findRouteBtn">Find Optimal Route</button>
+                    <div class="loading" id="loading">Calculating...</div>
+                </div>
+
+                <div class="section results" id="resultsSection" style="display: none;">
+                    <h2>Results</h2>
+                    <div id="resultsContent"></div>
+                </div>
+            </div>
+
+            <div class="visualization-area">
+                <canvas id="graphCanvas"></canvas>
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #e0e0e0;"></div>
+                        <span>Normal Node</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4CAF50;"></div>
+                        <span>Path Node</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-line" style="background: #999;"></div>
+                        <span>Normal Edge</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-line" style="background: #4CAF50;"></div>
+                        <span>Optimal Path</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Graph data structure
+        const graph = {
+            nodes: [
+                { id: 'Warehouse', x: 150, y: 100 },
+                { id: 'A', x: 350, y: 80 },
+                { id: 'B', x: 550, y: 100 },
+                { id: 'C', x: 150, y: 250 },
+                { id: 'D', x: 350, y: 220 },
+                { id: 'E', x: 550, y: 250 },
+                { id: 'F', x: 750, y: 200 },
+                { id: 'G', x: 250, y: 400 },
+                { id: 'H', x: 450, y: 380 },
+                { id: 'I', x: 650, y: 400 },
+                { id: 'J', x: 450, y: 520 }
+            ],
+            edges: [
+                { from: 'Warehouse', to: 'A', weight: 5 },
+                { from: 'Warehouse', to: 'C', weight: 8 },
+                { from: 'A', to: 'B', weight: 7 },
+                { from: 'A', to: 'D', weight: 6 },
+                { from: 'B', to: 'E', weight: 4 },
+                { from: 'B', to: 'F', weight: 9 },
+                { from: 'C', to: 'D', weight: 3 },
+                { from: 'C', to: 'G', weight: 10 },
+                { from: 'D', to: 'E', weight: 5 },
+                { from: 'D', to: 'H', weight: 7 },
+                { from: 'E', to: 'F', weight: 6 },
+                { from: 'E', to: 'I', weight: 8 },
+                { from: 'F', to: 'I', weight: 5 },
+                { from: 'G', to: 'H', weight: 4 },
+                { from: 'G', to: 'J', weight: 12 },
+                { from: 'H', to: 'I', weight: 6 },
+                { from: 'H', to: 'J', weight: 5 },
+                { from: 'I', to: 'J', weight: 7 },
+                // Some bidirectional edges
+                { from: 'D', to: 'A', weight: 6 },
+                { from: 'E', to: 'D', weight: 5 },
+                { from: 'I', to: 'E', weight: 8 },
+                { from: 'J', to: 'H', weight: 5 },
+                // Additional connections
+                { from: 'A', to: 'Warehouse', weight: 5 },
+                { from: 'B', to: 'A', weight: 7 },
+                { from: 'C', to: 'Warehouse', weight: 8 }
+            ]
+        };
+
+        // Floyd-Warshall Algorithm Implementation
+        class FloydWarshall {
+            constructor(graph) {
+                this.nodes = graph.nodes;
+                this.edges = graph.edges;
+                this.n = this.nodes.length;
+                this.nodeIndex = {};
+                
+                // Create node index mapping
+                this.nodes.forEach((node, i) => {
+                    this.nodeIndex[node.id] = i;
+                });
+
+                // Initialize distance and next matrices
+                this.dist = Array(this.n).fill(null).map(() => Array(this.n).fill(Infinity));
+                this.next = Array(this.n).fill(null).map(() => Array(this.n).fill(null));
+
+                // Initialize diagonal to 0
+                for (let i = 0; i < this.n; i++) {
+                    this.dist[i][i] = 0;
+                }
+
+                // Add edges to distance matrix
+                this.edges.forEach(edge => {
+                    const u = this.nodeIndex[edge.from];
+                    const v = this.nodeIndex[edge.to];
+                    this.dist[u][v] = edge.weight;
+                    this.next[u][v] = v;
+                });
+
+                // Run Floyd-Warshall algorithm
+                this.compute();
+            }
+
+            compute() {
+                // Floyd-Warshall algorithm
+                for (let k = 0; k < this.n; k++) {
+                    for (let i = 0; i < this.n; i++) {
+                        for (let j = 0; j < this.n; j++) {
+                            if (this.dist[i][k] + this.dist[k][j] < this.dist[i][j]) {
+                                this.dist[i][j] = this.dist[i][k] + this.dist[k][j];
+                                this.next[i][j] = this.next[i][k];
+                            }
+                        }
+                    }
+                }
+            }
+
+            getPath(start, end) {
+                const u = this.nodeIndex[start];
+                const v = this.nodeIndex[end];
+
+                if (this.next[u][v] === null) {
+                    return null; // No path exists
+                }
+
+                const path = [u];
+                let current = u;
+
+                while (current !== v) {
+                    current = this.next[current][v];
+                    path.push(current);
+                }
+
+                // Convert indices back to node IDs
+                return path.map(i => this.nodes[i].id);
+            }
+
+            getDistance(start, end) {
+                const u = this.nodeIndex[start];
+                const v = this.nodeIndex[end];
+                return this.dist[u][v];
+            }
+        }
+
+        // Visualization class
+        class GraphVisualizer {
+            constructor(canvas, graph) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.graph = graph;
+                this.highlightedPath = [];
+                this.scale = 1;
+                this.offsetX = 0;
+                this.offsetY = 0;
+
+                this.resizeCanvas();
+                window.addEventListener('resize', () => this.resizeCanvas());
+            }
+
+            resizeCanvas() {
+                const rect = this.canvas.parentElement.getBoundingClientRect();
+                this.canvas.width = rect.width - 60;
+                this.canvas.height = rect.height - 60;
+                this.draw();
+            }
+
+            draw() {
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+
+                // Draw edges
+                this.graph.edges.forEach(edge => {
+                    this.drawEdge(edge);
+                });
+
+                // Draw nodes
+                this.graph.nodes.forEach(node => {
+                    this.drawNode(node);
+                });
+            }
+
+            drawEdge(edge) {
+                const fromNode = this.graph.nodes.find(n => n.id === edge.from);
+                const toNode = this.graph.nodes.find(n => n.id === edge.to);
+
+                if (!fromNode || !toNode) return;
+
+                const isHighlighted = this.isEdgeInPath(edge.from, edge.to);
+                
+                this.ctx.save();
+                this.ctx.strokeStyle = isHighlighted ? '#4CAF50' : '#999';
+                this.ctx.lineWidth = isHighlighted ? 4 : 2;
+                this.ctx.globalAlpha = isHighlighted ? 1 : 0.6;
+
+                // Calculate arrow
+                const dx = toNode.x - fromNode.x;
+                const dy = toNode.y - fromNode.y;
+                const angle = Math.atan2(dy, dx);
+                const length = Math.sqrt(dx * dx + dy * dy);
+                
+                // Shorten line to not overlap with nodes
+                const startX = fromNode.x + Math.cos(angle) * 25;
+                const startY = fromNode.y + Math.sin(angle) * 25;
+                const endX = toNode.x - Math.cos(angle) * 25;
+                const endY = toNode.y - Math.sin(angle) * 25;
+
+                // Draw line
+                this.ctx.beginPath();
+                this.ctx.moveTo(startX, startY);
+                this.ctx.lineTo(endX, endY);
+                this.ctx.stroke();
+
+                // Draw arrow head
+                const arrowSize = 10;
+                this.ctx.beginPath();
+                this.ctx.moveTo(endX, endY);
+                this.ctx.lineTo(
+                    endX - arrowSize * Math.cos(angle - Math.PI / 6),
+                    endY - arrowSize * Math.sin(angle - Math.PI / 6)
+                );
+                this.ctx.moveTo(endX, endY);
+                this.ctx.lineTo(
+                    endX - arrowSize * Math.cos(angle + Math.PI / 6),
+                    endY - arrowSize * Math.sin(angle + Math.PI / 6)
+                );
+                this.ctx.stroke();
+
+                // Draw weight
+                const midX = (fromNode.x + toNode.x) / 2;
+                const midY = (fromNode.y + toNode.y) / 2;
+                
+                this.ctx.fillStyle = isHighlighted ? '#4CAF50' : '#666';
+                this.ctx.font = isHighlighted ? 'bold 14px Arial' : '12px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.globalAlpha = 1;
+                
+                // Background for weight text
+                this.ctx.fillStyle = 'white';
+                this.ctx.fillRect(midX - 15, midY - 10, 30, 20);
+                
+                this.ctx.fillStyle = isHighlighted ? '#4CAF50' : '#666';
+                this.ctx.fillText(edge.weight.toString(), midX, midY);
+
+                this.ctx.restore();
+            }
+
+            drawNode(node) {
+                const isHighlighted = this.highlightedPath.includes(node.id);
+                const isStart = this.highlightedPath.length > 0 && this.highlightedPath[0] === node.id;
+                const isEnd = this.highlightedPath.length > 0 && this.highlightedPath[this.highlightedPath.length - 1] === node.id;
+
+                // Draw node circle
+                this.ctx.beginPath();
+                this.ctx.arc(node.x, node.y, 20, 0, 2 * Math.PI);
+                
+                if (isStart) {
+                    this.ctx.fillStyle = '#2196F3';
+                } else if (isEnd) {
+                    this.ctx.fillStyle = '#FF9800';
+                } else if (isHighlighted) {
+                    this.ctx.fillStyle = '#4CAF50';
+                } else {
+                    this.ctx.fillStyle = '#e0e0e0';
+                }
+                
+                this.ctx.fill();
+                this.ctx.strokeStyle = '#333';
+                this.ctx.lineWidth = 2;
+                this.ctx.stroke();
+
+                // Draw node label
+                this.ctx.fillStyle = isHighlighted ? 'white' : '#333';
+                this.ctx.font = 'bold 12px Arial';
+                this.ctx.textAlign = 'center';
+                this.ctx.textBaseline = 'middle';
+                this.ctx.fillText(node.id, node.x, node.y);
+            }
+
+            isEdgeInPath(from, to) {
+                if (this.highlightedPath.length < 2) return false;
+                
+                for (let i = 0; i < this.highlightedPath.length - 1; i++) {
+                    if (this.highlightedPath[i] === from && this.highlightedPath[i + 1] === to) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            setHighlightedPath(path) {
+                this.highlightedPath = path || [];
+                this.draw();
+            }
+        }
+
+        // Initialize application
+        let floydWarshall;
+        let visualizer;
+
+        function init() {
+            const canvas = document.getElementById('graphCanvas');
+            visualizer = new GraphVisualizer(canvas, graph);
+
+            // Populate dropdowns
+            const startSelect = document.getElementById('startLocation');
+            const endSelect = document.getElementById('endLocation');
+
+            graph.nodes.forEach(node => {
+                const option1 = document.createElement('option');
+                option1.value = node.id;
+                option1.textContent = node.id;
+                startSelect.appendChild(option1);
+
+                const option2 = document.createElement('option');
+                option2.value = node.id;
+                option2.textContent = node.id;
+                endSelect.appendChild(option2);
+            });
+
+            // Compute Floyd-Warshall
+            floydWarshall = new FloydWarshall(graph);
+
+            // Set up event listeners
+            document.getElementById('findRouteBtn').addEventListener('click', findRoute);
+        }
+
+        function findRoute() {
+            const start = document.getElementById('startLocation').value;
+            const end = document.getElementById('endLocation').value;
+            const resultsSection = document.getElementById('resultsSection');
+            const resultsContent = document.getElementById('resultsContent');
+            const loading = document.getElementById('loading');
+
+            if (!start || !end) {
+                resultsContent.innerHTML = `
+                    <div class="result-content error">
+                        <div class="result-value">Please select both start and end locations.</div>
+                    </div>
+                `;
+                resultsSection.style.display = 'block';
+                visualizer.setHighlightedPath([]);
+                return;
+            }
+
+            if (start === end) {
+                resultsContent.innerHTML = `
+                    <div class="result-content error">
+                        <div class="result-value">Start and end locations must be different.</div>
+                    </div>
+                `;
+                resultsSection.style.display = 'block';
+                visualizer.setHighlightedPath([]);
+                return;
+            }
+
+            // Show loading
+            loading.classList.add('active');
+
+            // Simulate computation delay for better UX
+            setTimeout(() => {
+                const path = floydWarshall.getPath(start, end);
+                const distance = floydWarshall.getDistance(start, end);
+
+                loading.classList.remove('active');
+
+                if (!path || distance === Infinity) {
+                    resultsContent.innerHTML = `
+                        <div class="result-content error">
+                            <div class="result-value">No path exists between ${start} and ${end}.</div>
+                        </div>
+                    `;
+                    visualizer.setHighlightedPath([]);
+                } else {
+                    const pathString = path.join(' → ');
+                    resultsContent.innerHTML = `
+                        <div class="result-content">
+                            <div class="result-label">Optimal Path:</div>
+                            <div class="path-display">${pathString}</div>
+                            <div class="result-label" style="margin-top: 15px;">Total Travel Time:</div>
+                            <div class="result-value" style="font-size: 1.5rem; color: #4CAF50; font-weight: bold;">${distance} minutes</div>
+                            <div class="result-label" style="margin-top: 10px;">Stops:</div>
+                            <div class="result-value">${path.length - 1} intermediate stop(s)</div>
+                        </div>
+                    `;
+                    visualizer.setHighlightedPath(path);
+                }
+
+                resultsSection.style.display = 'block';
+            }, 300);
+        }
+
+        // Initialize on load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
